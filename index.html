@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>근대식 출판 단행본 DB</title>
+<style>
+  :root{
+    --ink:#22201c; --ink2:#4a463f; --mute:#8a8172; --line:#e2dccf;
+    --paper:#f6f1e6; --card:#fffdf8; --accent:#8b2f24; --accent2:#b6553e;
+    --gold:#9a7b3f; --shadow:0 1px 3px rgba(60,45,25,.10),0 6px 22px rgba(60,45,25,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Malgun Gothic","Apple SD Gothic Neo","맑은 고딕",system-ui,sans-serif;
+    color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .serif{font-family:"Batang","바탕",Georgia,serif}
+  a{color:var(--accent)}
+  /* ---------- Header ---------- */
+  header{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#3a2b1e,#2c2117);color:#f3ead9;
+    border-bottom:3px solid var(--gold)}
+  .head-in{max-width:1180px;margin:0 auto;padding:16px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand{display:flex;flex-direction:column}
+  .brand h1{margin:0;font-size:22px;letter-spacing:1px;font-weight:700}
+  .brand .en{font-size:11px;color:#c9b68f;letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+  .search{margin-left:auto;flex:1;min-width:240px;max-width:460px;position:relative}
+  .search input{width:100%;padding:11px 14px 11px 40px;border-radius:30px;border:1px solid #5a4a38;
+    background:#faf5ea;color:#2b2119;font-size:15px;outline:none}
+  .search input:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(154,123,63,.25)}
+  .search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);opacity:.5}
+  /* ---------- Layout ---------- */
+  main{max-width:1180px;margin:0 auto;padding:22px}
+  .toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
+  .fld{display:flex;flex-direction:column;gap:4px}
+  .fld label{font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.5px}
+  .fld select{padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);
+    font-size:14px;color:var(--ink);min-width:130px;cursor:pointer}
+  .count{margin-left:auto;font-size:13px;color:var(--mute);align-self:center}
+  .count b{color:var(--accent);font-size:16px}
+  .reset{padding:8px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;
+    font-size:13px;color:var(--ink2)}
+  .reset:hover{background:#f0e8d6}
+  /* ---------- List ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px}
+  .book{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+    cursor:pointer;box-shadow:var(--shadow);transition:transform .13s,box-shadow .13s;display:flex;flex-direction:column}
+  .book:hover{transform:translateY(-3px);box-shadow:0 4px 10px rgba(60,45,25,.14),0 14px 34px rgba(60,45,25,.13)}
+  .thumb{height:210px;background:#efe7d6 center/cover;position:relative;border-bottom:1px solid var(--line)}
+  .thumb .yr{position:absolute;top:10px;left:10px;background:var(--accent);color:#fff;font-size:12px;
+    padding:3px 9px;border-radius:20px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .book .b-body{padding:13px 15px 16px}
+  .book h3{margin:0 0 3px;font-size:19px;font-weight:700}
+  .book .ko{color:var(--mute);font-size:13px;margin-bottom:9px}
+  .book .meta{font-size:12.5px;color:var(--ink2);display:flex;flex-direction:column;gap:3px}
+  .book .meta span{display:flex;gap:6px}
+  .book .meta i{color:var(--mute);font-style:normal;min-width:38px}
+  .tag{display:inline-block;margin-top:10px;font-size:11px;background:#f0e7d3;color:var(--gold);
+    padding:2px 9px;border-radius:20px;font-weight:700}
+  .empty{text-align:center;padding:70px 20px;color:var(--mute)}
+  /* ---------- Detail overlay ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(30,22,14,.55);z-index:50;display:none;
+    align-items:flex-start;justify-content:center;padding:26px;overflow:auto;backdrop-filter:blur(2px)}
+  .overlay.on{display:flex}
+  .detail{background:var(--paper);width:100%;max-width:1000px;border-radius:14px;overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);animation:pop .18s ease}
+  @keyframes pop{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+  .d-head{background:linear-gradient(180deg,#3a2b1e,#2c2117);color:#f3ead9;padding:20px 26px;position:relative}
+  .d-head h2{margin:0;font-size:27px;font-weight:700;letter-spacing:1px}
+  .d-head .sub{color:#c9b68f;font-size:14px;margin-top:4px}
+  .d-head .chips{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);color:#f0e6d3;
+    font-size:12px;padding:3px 11px;border-radius:20px}
+  .close{position:absolute;top:16px;right:18px;width:34px;height:34px;border-radius:50%;border:none;
+    background:rgba(255,255,255,.14);color:#fff;font-size:20px;cursor:pointer;line-height:1}
+  .close:hover{background:rgba(255,255,255,.28)}
+  /* tabs */
+  .tabs{display:flex;gap:2px;background:#e7dfcd;padding:0 18px;border-bottom:1px solid var(--line)}
+  .tabs button{border:none;background:none;padding:13px 18px;font-size:14px;font-weight:700;color:var(--ink2);
+    cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+  .tabs button.act{color:var(--accent);border-bottom-color:var(--accent);background:var(--paper)}
+  .pane{padding:24px 28px;display:none}
+  .pane.act{display:block}
+  /* 서지 table */
+  table.biblio{width:100%;border-collapse:collapse;font-size:14px}
+  table.biblio th{text-align:left;vertical-align:top;width:170px;padding:10px 14px;color:var(--accent);
+    font-weight:700;background:#efe7d5;border:1px solid var(--line);white-space:nowrap}
+  table.biblio td{padding:10px 14px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  /* 해제 */
+  .haeje{font-size:15.5px;line-height:1.95;color:var(--ink)}
+  .haeje p{margin:0 0 15px;text-indent:.4em}
+  .haeje .lead{border-left:3px solid var(--gold);padding-left:14px;color:var(--ink2)}
+  /* 원문 viewer */
+  .viewer{display:grid;grid-template-columns:110px 1fr;gap:16px}
+  .film{display:flex;flex-direction:column;gap:8px;max-height:560px;overflow:auto;padding-right:4px}
+  .film img{width:100%;border:2px solid transparent;border-radius:6px;cursor:pointer;display:block;background:#eee}
+  .film .fitem{position:relative}
+  .film .fitem.act img{border-color:var(--accent)}
+  .film .cap{font-size:10px;color:var(--mute);text-align:center;margin-top:2px;line-height:1.3}
+  .stage{background:#2a2118;border-radius:10px;padding:14px;position:relative}
+  .stage-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap}
+  .stage-cap{color:#e9dcc3;font-size:13px}
+  .toggle{display:flex;gap:6px}
+  .toggle button{border:1px solid #5a4a38;background:#3a2e20;color:#e9dcc3;padding:6px 12px;border-radius:20px;
+    font-size:12px;cursor:pointer;font-weight:700}
+  .toggle button.act{background:var(--accent);border-color:var(--accent);color:#fff}
+  .stage-body{display:flex;gap:14px;align-items:flex-start}
+  .stage-body img{max-width:100%;max-height:560px;border-radius:4px;box-shadow:0 6px 20px rgba(0,0,0,.35);background:#fff}
+  .imgwrap{flex:1;text-align:center;min-width:0}
+  .trwrap{flex:1;background:#f6f1e4;border-radius:8px;padding:16px 18px;max-height:560px;overflow:auto;display:none}
+  .trwrap.on{display:block}
+  .trwrap h4{margin:0 0 10px;color:var(--accent);font-size:14px}
+  .trwrap pre{font-family:"Batang","바탕",serif;font-size:16px;line-height:2.1;white-space:pre-wrap;margin:0;color:#2b2119}
+  .trwrap .note{margin-top:12px;font-size:11px;color:var(--mute);border-top:1px dashed var(--line);padding-top:8px}
+  .split .imgwrap{flex:1.1}
+  .noTr{color:var(--mute);font-size:13px;padding:10px;text-align:center}
+  /* 광고 */
+  .ads{display:flex;flex-direction:column;gap:14px}
+  .ad{display:grid;grid-template-columns:64px 1fr;gap:16px;background:var(--card);border:1px solid var(--line);
+    border-radius:10px;padding:16px 18px}
+  .ad .stamp{width:64px;height:64px;border-radius:8px;background:repeating-linear-gradient(45deg,#efe2c8,#efe2c8 6px,#e7d6b4 6px,#e7d6b4 12px);
+    display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:700;font-size:22px;
+    border:1px solid var(--line)}
+  .ad h4{margin:0 0 6px;font-size:16px;color:var(--ink)}
+  .ad .row{font-size:13.5px;color:var(--ink2);display:flex;gap:8px;margin-top:2px}
+  .ad .row i{color:var(--mute);font-style:normal;min-width:52px}
+  .adnote{font-size:12.5px;color:var(--mute);background:#efe7d5;padding:12px 15px;border-radius:8px;margin-bottom:6px}
+  footer{max-width:1180px;margin:10px auto 40px;padding:0 22px;color:var(--mute);font-size:12px;text-align:center}
+  @media(max-width:640px){
+    .viewer{grid-template-columns:1fr}.film{flex-direction:row;max-height:none}
+    .film img{width:70px}.stage-body{flex-direction:column}.split .imgwrap{flex:none;width:100%}
+    table.biblio th{width:120px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="head-in">
+    <div class="brand">
+      <h1>近代式 出版 單行本 DB</h1>
+      <span class="en">Modern Korean Monograph Bibliography · prototype</span>
+    </div>
+    <div class="search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5a4a38" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="q" type="search" placeholder="서명·저자·출판사·주제어 검색 …" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="fld"><label>발행연도</label><select id="fYear"></select></div>
+    <div class="fld"><label>저자·역자</label><select id="fAuthor"></select></div>
+    <div class="fld"><label>출판사</label><select id="fPub"></select></div>
+    <div class="fld"><label>주제</label><select id="fSubj"></select></div>
+    <div class="fld"><label>정렬</label>
+      <select id="fSort">
+        <option value="year">발행연도순</option>
+        <option value="title">서명순(가나다)</option>
+      </select>
+    </div>
+    <button class="reset" id="reset">초기화</button>
+    <div class="count"><b id="cnt">0</b> 종</div>
+  </div>
+  <div id="grid" class="grid"></div>
+  <div id="empty" class="empty" style="display:none">검색 결과가 없습니다.</div>
+</main>
+
+<footer>
+  근대식 출판 단행본 DB — 프로토타입 · 표본 자료 4종(근대 신식활자본 자료 정리 카드 기반) · 원문 이미지 및 강명관 카드(신문 광고) 포함
+</footer>
+
+<!-- Detail overlay -->
+<div class="overlay" id="overlay">
+  <div class="detail" id="detail"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const grid = $("#grid");
+let state = { q:"", year:"", author:"", pub:"", subj:"", sort:"year" };
+
+/* ---- populate filters ---- */
+function uniq(arr){ return [...new Set(arr)].filter(Boolean); }
+function fillSelect(el, items, label){
+  el.innerHTML = `<option value="">${label}</option>` + items.map(v=>`<option>${v}</option>`).join("");
+}
+fillSelect($("#fYear"), uniq(BOOKS.map(b=>b.year)).sort(), "전체 연도");
+fillSelect($("#fAuthor"), uniq(BOOKS.map(b=>b.authorMain)).sort(), "전체 저자");
+fillSelect($("#fPub"), uniq(BOOKS.map(b=>b.publisher)).sort(), "전체 출판사");
+fillSelect($("#fSubj"), uniq(BOOKS.map(b=>b.subject)).sort(), "전체 주제");
+
+/* ---- filtering ---- */
+function coverOf(b){
+  const p = b.pages.find(p=>p.kind==="photo") || b.pages[0];
+  return `assets/${b.id}/${p.f}`;
+}
+function matches(b){
+  const q = state.q.trim().toLowerCase();
+  if(q){
+    const hay = [b.title,b.titleKo,b.publisher,b.subject,b.authorMain,
+      ...b.authors,...b.keywords,b.callno,b.holder].join(" ").toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  if(state.year && String(b.year)!==state.year) return false;
+  if(state.author && b.authorMain!==state.author) return false;
+  if(state.pub && b.publisher!==state.pub) return false;
+  if(state.subj && b.subject!==state.subj) return false;
+  return true;
+}
+function render(){
+  let list = BOOKS.filter(matches);
+  list.sort((a,b)=> state.sort==="title" ? a.title.localeCompare(b.title,"ko") : a.year-b.year);
+  $("#cnt").textContent = list.length;
+  $("#empty").style.display = list.length? "none":"block";
+  grid.innerHTML = list.map(b=>`
+    <article class="book" data-id="${b.id}">
+      <div class="thumb" style="background-image:url('${coverOf(b)}')">
+        <span class="yr">${b.year}</span>
+      </div>
+      <div class="b-body">
+        <h3 class="serif">${b.title}</h3>
+        <div class="ko">${b.titleKo}</div>
+        <div class="meta">
+          <span><i>저자</i>${b.authorMain}</span>
+          <span><i>발행</i>${b.publisher}</span>
+          <span><i>소장</i>${b.holder}</span>
+        </div>
+        <span class="tag">${b.subject}</span>
+      </div>
+    </article>`).join("");
+}
+grid.addEventListener("click", e=>{
+  const el = e.target.closest(".book"); if(el) openDetail(el.dataset.id);
+});
+
+/* ---- controls ---- */
+$("#q").addEventListener("input", e=>{state.q=e.target.value; render();});
+$("#fYear").addEventListener("change", e=>{state.year=e.target.value; render();});
+$("#fAuthor").addEventListener("change", e=>{state.author=e.target.value; render();});
+$("#fPub").addEventListener("change", e=>{state.pub=e.target.value; render();});
+$("#fSubj").addEventListener("change", e=>{state.subj=e.target.value; render();});
+$("#fSort").addEventListener("change", e=>{state.sort=e.target.value; render();});
+$("#reset").addEventListener("click", ()=>{
+  state={q:"",year:"",author:"",pub:"",subj:"",sort:"year"};
+  $("#q").value=""; ["#fYear","#fAuthor","#fPub","#fSubj"].forEach(s=>$(s).value="");
+  $("#fSort").value="year"; render();
+});
+
+/* ---- detail ---- */
+function openDetail(id){
+  const b = BOOKS.find(x=>x.id===id); if(!b) return;
+  const bib = Object.entries(b.fields).map(([k,v])=>
+    `<tr><th>${k}</th><td>${v}</td></tr>`).join("");
+  const haeje = `<div class="haeje">${b.haeje.split("\n\n").map((p,i)=>
+    `<p class="${i===0?'lead':''}">${p}</p>`).join("")}</div>`;
+  const ads = `
+    <div class="adnote">📰 <b>강명관 카드</b> — 근대 신문에 실린 해당 단행본의 발매 광고 기록입니다. (신문명 · 게재일 · 정가 · 발매소)</div>
+    <div class="ads">${b.ads.map(a=>`
+      <div class="ad">
+        <div class="stamp">廣</div>
+        <div>
+          <h4>${a.paper}</h4>
+          <div class="row"><i>게재일</i>${a.date}</div>
+          <div class="row"><i>정가</i>${a.price}</div>
+          <div class="row"><i>발매소</i>${a.seller}</div>
+        </div>
+      </div>`).join("")}</div>`;
+
+  $("#detail").innerHTML = `
+    <div class="d-head">
+      <button class="close" onclick="closeDetail()">×</button>
+      <h2 class="serif">${b.title}</h2>
+      <div class="sub">${b.titleKo} · ${b.yearLabel}</div>
+      <div class="chips">
+        <span class="chip">저자 ${b.authorMain}</span>
+        <span class="chip">${b.publisher}</span>
+        <span class="chip">${b.script}</span>
+        <span class="chip">청구기호 ${b.callno}</span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button data-t="bib" class="act">서지정보</button>
+      <button data-t="img">원문 열람</button>
+      <button data-t="hae">해제</button>
+      <button data-t="ad">신문 광고 (${b.ads.length})</button>
+    </div>
+    <div class="pane act" data-p="bib"><table class="biblio">${bib}</table></div>
+    <div class="pane" data-p="img">${viewerHTML(b)}</div>
+    <div class="pane" data-p="hae">${haeje}</div>
+    <div class="pane" data-p="ad">${ads}</div>`;
+
+  $("#detail").querySelectorAll(".tabs button").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      $("#detail").querySelectorAll(".tabs button").forEach(x=>x.classList.remove("act"));
+      $("#detail").querySelectorAll(".pane").forEach(x=>x.classList.remove("act"));
+      btn.classList.add("act");
+      $(`#detail .pane[data-p="${btn.dataset.t}"]`).classList.add("act");
+    });
+  });
+  initViewer(b);
+  $("#overlay").classList.add("on");
+  document.body.style.overflow="hidden";
+}
+function closeDetail(){ $("#overlay").classList.remove("on"); document.body.style.overflow=""; }
+$("#overlay").addEventListener("click", e=>{ if(e.target.id==="overlay") closeDetail(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") closeDetail(); });
+
+/* ---- 원문 viewer ---- */
+function viewerHTML(b){
+  const film = b.pages.map((p,i)=>`
+    <div class="fitem ${i===0?'act':''}" data-i="${i}">
+      <img src="assets/${b.id}/${p.f}" loading="lazy" alt="">
+      <div class="cap">${p.cap}</div>
+    </div>`).join("");
+  return `
+    <div class="viewer">
+      <div class="film" id="film">${film}</div>
+      <div class="stage">
+        <div class="stage-top">
+          <div class="stage-cap serif" id="stageCap"></div>
+          <div class="toggle">
+            <button id="tImg" class="act">원문 이미지</button>
+            <button id="tTr">원문 이미지 + 입력</button>
+          </div>
+        </div>
+        <div class="stage-body" id="stageBody">
+          <div class="imgwrap"><img id="stageImg" src="" alt=""></div>
+          <div class="trwrap" id="trwrap"></div>
+        </div>
+      </div>
+    </div>`;
+}
+function initViewer(b){
+  let cur=0, split=false;
+  const film=$("#film"), img=$("#stageImg"), cap=$("#stageCap"),
+        tr=$("#trwrap"), body=$("#stageBody");
+  function show(i){
+    cur=i; const p=b.pages[i];
+    img.src=`assets/${b.id}/${p.f}`;
+    cap.textContent=`${p.cap}  (${i+1}/${b.pages.length})`;
+    film.querySelectorAll(".fitem").forEach((f,k)=>f.classList.toggle("act",k===i));
+    film.querySelectorAll(".fitem")[i].scrollIntoView({block:"nearest"});
+    renderTr(p);
+  }
+  function renderTr(p){
+    if(!split){ tr.classList.remove("on"); body.classList.remove("split"); return; }
+    body.classList.add("split"); tr.classList.add("on");
+    const t = p.tr && TRANSCRIPTS[p.tr];
+    tr.innerHTML = t
+      ? `<h4>▤ 원문 입력 · ${t.head}</h4><pre>${t.body}</pre>
+         <div class="note">※ 표본 교감 입력입니다. 세로쓰기 원문을 가로로 옮긴 판독본이며 실제 DB에서는 전 페이지 교감본이 연결됩니다.</div>`
+      : `<div class="noTr">이 면은 원문 입력(교감)이 아직 준비 중입니다.<br>표지·판권지 등 서지 촬영면이거나 입력 대기 상태입니다.</div>`;
+  }
+  film.querySelectorAll(".fitem").forEach(f=>
+    f.addEventListener("click",()=>show(+f.dataset.i)));
+  $("#tImg").addEventListener("click",()=>{
+    split=false; $("#tImg").classList.add("act"); $("#tTr").classList.remove("act"); renderTr(b.pages[cur]);
+  });
+  $("#tTr").addEventListener("click",()=>{
+    split=true; $("#tTr").classList.add("act"); $("#tImg").classList.remove("act"); renderTr(b.pages[cur]);
+  });
+  show(0);
+}
+
+render();
+</script>
+</body>
+</html>
